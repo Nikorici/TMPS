@@ -4,12 +4,6 @@ export interface Notifier {
   send(customer: Customer, message: string): Promise<void>;
 }
 
-export class EmailNotifier implements Notifier {
-  async send(customer: Customer, message: string): Promise<void> {
-    console.log(`[email -> ${customer.email}]\n${message}\n`);
-  }
-}
-
 export class SmsNotifier implements Notifier {
   async send(customer: Customer, message: string): Promise<void> {
     console.log(`[sms -> ${customer.phone}] ${message.split("\n")[0]}\n`);

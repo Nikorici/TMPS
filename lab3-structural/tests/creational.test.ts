@@ -4,7 +4,7 @@ import { EventBuilder } from "../src/creational/event-builder.ts";
 import { EventCatalog } from "../src/creational/event-catalog.ts";
 import { BoxOfficeChannel, OnlineChannel } from "../src/creational/sales-channels.ts";
 import { CardPayment, CashPayment } from "../src/services/payments.ts";
-import { conference } from "./fixtures.ts";
+import { conference, offlineMailer, SENDER } from "./fixtures.ts";
 
 describe("creational patterns reused from Lab 2", () => {
   it("Builder names the missing required steps", () => {
@@ -22,7 +22,7 @@ describe("creational patterns reused from Lab 2", () => {
   });
 
   it("Abstract Factory creates a matching payment per channel", () => {
-    assert.ok(new OnlineChannel().createPayment() instanceof CardPayment);
+    assert.ok(new OnlineChannel(offlineMailer(), SENDER).createPayment() instanceof CardPayment);
     assert.ok(new BoxOfficeChannel().createPayment() instanceof CashPayment);
   });
 });

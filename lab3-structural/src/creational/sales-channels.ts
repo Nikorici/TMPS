@@ -1,5 +1,7 @@
-import { EmailNotifier, type Notifier, ReceiptPrinter, SmsNotifier } from "../services/notifications.ts";
+import type { Transporter } from "nodemailer";
+import { type Notifier, ReceiptPrinter, SmsNotifier } from "../services/notifications.ts";
 import { CardPayment, CashPayment, type PaymentGateway } from "../services/payments.ts";
+import { NodemailerNotifier } from "../structural/adapter/nodemailer-notifier.ts";
 
 export interface SalesChannel {
   createPayment(): PaymentGateway;
@@ -7,12 +9,20 @@ export interface SalesChannel {
 }
 
 export class OnlineChannel implements SalesChannel {
+  private readonly mailer: Transporter;
+  private readonly sender: string;
+
+  constructor(mailer: Transporter, sender: string) {
+    this.mailer = mailer;
+    this.sender = sender;
+  }
+
   createPayment(): PaymentGateway {
     return new CardPayment();
   }
 
   createNotifiers(): Notifier[] {
-    return [new EmailNotifier(), new SmsNotifier()];
+    return [new NodemailerNotifier(this.mailer, this.sender), new SmsNotifier()];
   }
 }
 

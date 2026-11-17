@@ -1,5 +1,12 @@
+import nodemailer, { type Transporter } from "nodemailer";
 import { EventBuilder } from "../src/creational/event-builder.ts";
 import type { Customer, Event } from "../src/domain/models.ts";
+
+export const SENDER = "Test Conf <tickets@conf.example>";
+
+export function offlineMailer(): Transporter {
+  return nodemailer.createTransport({ jsonTransport: true });
+}
 
 export const BUYER: Customer = { name: "Buyer", email: "buyer@example.com", phone: "+1", isStudent: false };
 export const STUDENT: Customer = { name: "Student", email: "student@example.com", phone: "+2", isStudent: true };

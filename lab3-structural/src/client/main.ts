@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { EventBuilder } from "../creational/event-builder.ts";
 import { EventCatalog } from "../creational/event-catalog.ts";
 import { BoxOfficeChannel, OnlineChannel, type SalesChannel } from "../creational/sales-channels.ts";
@@ -34,7 +35,8 @@ function openDesk(channel: SalesChannel): BookingService {
   return new BookingService(calculator, channel.createPayment(), repository, channel.createNotifiers(), receipts);
 }
 
-const online = openDesk(new OnlineChannel());
+const mailer = nodemailer.createTransport({ jsonTransport: true });
+const online = openDesk(new OnlineChannel(mailer, "Moldova Tech Summit <tickets@techsummit.example>"));
 const boxOffice = openDesk(new BoxOfficeChannel());
 
 const student: Customer = { name: "Ana Rusu", email: "ana.rusu@example.com", phone: "+37360000001", isStudent: true };
