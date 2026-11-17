@@ -5,19 +5,9 @@ import { TicketOrder } from "../src/domain/models.ts";
 import { mdl } from "../src/domain/money.ts";
 import { BookingService } from "../src/services/booking-service.ts";
 import { InMemoryOrderRepository } from "../src/services/order-repository.ts";
-import type { PaymentGateway } from "../src/services/payments.ts";
 import { EarlyBirdDiscount, GroupDiscount, PriceCalculator, StudentDiscount } from "../src/services/pricing.ts";
 import { ReceiptFormatter } from "../src/services/receipts.ts";
-import { BUYER, conference, ORDERED_ON, STUDENT } from "./fixtures.ts";
-
-class CountingGateway implements PaymentGateway {
-  charges = 0;
-
-  async charge(): Promise<string> {
-    this.charges += 1;
-    return `TEST-${this.charges}`;
-  }
-}
+import { BUYER, conference, CountingGateway, ORDERED_ON, STUDENT } from "./fixtures.ts";
 
 describe("core booking (ported from Labs 1-2)", () => {
   it("caps combined discounts at 30%", () => {

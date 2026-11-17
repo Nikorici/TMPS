@@ -2,13 +2,14 @@ import nodemailer from "nodemailer";
 import { EventBuilder } from "../creational/event-builder.ts";
 import { EventCatalog } from "../creational/event-catalog.ts";
 import { BoxOfficeChannel, OnlineChannel, type SalesChannel } from "../creational/sales-channels.ts";
-import { SoldOut } from "../domain/errors.ts";
+import { PaymentDeclined, SoldOut } from "../domain/errors.ts";
 import type { Customer } from "../domain/models.ts";
-import { mdl } from "../domain/money.ts";
+import { formatMdl, mdl } from "../domain/money.ts";
 import { BookingService } from "../services/booking-service.ts";
 import { InMemoryOrderRepository } from "../services/order-repository.ts";
 import { EarlyBirdDiscount, GroupDiscount, PriceCalculator, StudentDiscount } from "../services/pricing.ts";
 import { ReceiptFormatter } from "../services/receipts.ts";
+import { AuditLog } from "../structural/decorator/audit-log.ts";
 
 const summit = new EventBuilder()
   .named("Moldova Tech Summit")
@@ -30,17 +31,19 @@ const balti = catalog.edition("tech-summit", {
 const calculator = new PriceCalculator([new EarlyBirdDiscount(), new StudentDiscount(), new GroupDiscount()]);
 const repository = new InMemoryOrderRepository();
 const receipts = new ReceiptFormatter();
+const auditLog = new AuditLog();
 
 function openDesk(channel: SalesChannel): BookingService {
   return new BookingService(calculator, channel.createPayment(), repository, channel.createNotifiers(), receipts);
 }
 
 const mailer = nodemailer.createTransport({ jsonTransport: true });
-const online = openDesk(new OnlineChannel(mailer, "Moldova Tech Summit <tickets@techsummit.example>"));
-const boxOffice = openDesk(new BoxOfficeChannel());
+const online = openDesk(new OnlineChannel(mailer, "Moldova Tech Summit <tickets@techsummit.example>", auditLog));
+const boxOffice = openDesk(new BoxOfficeChannel(auditLog));
 
 const student: Customer = { name: "Ana Rusu", email: "ana.rusu@example.com", phone: "+37360000001", isStudent: true };
 const teamLead: Customer = { name: "Ion Ceban", email: "ion.ceban@example.com", phone: "+37360000002", isStudent: false };
+const company: Customer = { name: "Mihai Popa", email: "mihai.popa@example.com", phone: "+37360000004", isStudent: false };
 const lateBuyer: Customer = { name: "Maria Lungu", email: "maria.lungu@example.com", phone: "+37360000003", isStudent: false };
 
 console.log("=== Online: early-bird student, 2 tickets, Chișinău ===");
@@ -48,6 +51,14 @@ await online.book(summit, student, 2, "2026-10-27");
 
 console.log("=== Box office: group of 6, Bălți edition ===");
 await boxOffice.book(balti, teamLead, 6, "2027-03-01");
+
+console.log("=== Online: 30 tickets, over the 10,000 MDL online card limit ===");
+try {
+  await online.book(summit, company, 30, "2026-11-20");
+} catch (error) {
+  if (!(error instanceof PaymentDeclined)) throw error;
+  console.log(`Payment declined: ${error.message}\n`);
+}
 
 console.log("=== Online: 3 more tickets for Bălți (8 seats) ===");
 try {
@@ -59,4 +70,9 @@ try {
 
 for (const event of [summit, balti]) {
   console.log(`${event.venue}: ${repository.ticketsSold(event)}/${event.capacity} seats sold`);
+}
+
+console.log("\n=== Payment audit log ===");
+for (const entry of auditLog.list()) {
+  console.log(`${entry.reference}  ${formatMdl(entry.amount).padStart(12)}  ${entry.customer}`);
 }
