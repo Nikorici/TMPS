@@ -5,3 +5,7 @@ export class PaymentDeclined extends Error {
 export class SoldOut extends Error {
   override name = "SoldOut";
 }
+
+export class AccessDenied extends Error {
+  override name = "AccessDenied";
+}
