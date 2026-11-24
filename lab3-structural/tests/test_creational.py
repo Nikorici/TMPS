@@ -4,19 +4,20 @@ from contextlib import redirect_stdout
 from datetime import date
 from decimal import Decimal
 
+from tests.fixtures import SENDER, temp_outbox
 from ticketing.creational.catalog import EventCatalog
 from ticketing.creational.channels import BoxOfficeChannel, OnlineChannel
 from ticketing.creational.event_builder import EventBuilder
+from ticketing.domain.errors import SoldOut
 from ticketing.domain.models import Customer
+from ticketing.services.booking import BookingService
 from ticketing.services.notifications import ReceiptPrinter, SmsNotifier
-from ticketing.structural.adapter.mailbox_email_notifier import MailboxEmailNotifier
-from tests.fixtures import SENDER, temp_outbox
-from ticketing.services.payments import CardPayment, CashPayment, PaymentGateway
+from ticketing.services.payments import PaymentGateway
 from ticketing.services.pricing import PriceCalculator
 from ticketing.services.receipts import ReceiptFormatter
 from ticketing.services.repository import InMemoryOrderRepository
-from ticketing.domain.errors import SoldOut
-from ticketing.services.booking import BookingService
+from ticketing.structural.adapter.mailbox_email_notifier import MailboxEmailNotifier
+from ticketing.structural.decorator.audit_log import AuditLog
 
 BUYER = Customer("Buyer", "buyer@example.com", "+1")
 ORDERED_ON = date(2026, 11, 1)
@@ -93,19 +94,19 @@ class PrototypeTests(unittest.TestCase):
 
 class AbstractFactoryTests(unittest.TestCase):
     def test_online_family(self):
-        channel = OnlineChannel(temp_outbox(self), SENDER)
-        self.assertIsInstance(channel.create_payment(), CardPayment)
+        channel = OnlineChannel(temp_outbox(self), SENDER, AuditLog())
+        self.assertTrue(channel.create_payment().charge(BUYER, Decimal("10")).startswith("CARD-"))
         self.assertEqual([type(n) for n in channel.create_notifiers()], [MailboxEmailNotifier, SmsNotifier])
 
     def test_box_office_family(self):
-        channel = BoxOfficeChannel()
-        self.assertIsInstance(channel.create_payment(), CashPayment)
+        channel = BoxOfficeChannel(AuditLog())
+        self.assertTrue(channel.create_payment().charge(BUYER, Decimal("10")).startswith("CASH-"))
         self.assertEqual([type(n) for n in channel.create_notifiers()], [ReceiptPrinter])
 
     def test_same_service_runs_on_either_family(self):
         for channel, reference, output in (
-            (OnlineChannel(temp_outbox(self), SENDER), "CARD-0001", "[email -> buyer@example.com]"),
-            (BoxOfficeChannel(), "CASH-0001", "[printer -> Buyer]"),
+            (OnlineChannel(temp_outbox(self), SENDER, AuditLog()), "CARD-0001", "[email -> buyer@example.com]"),
+            (BoxOfficeChannel(AuditLog()), "CASH-0001", "[printer -> Buyer]"),
         ):
             service = BookingService(
                 PriceCalculator([]),
