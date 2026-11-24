@@ -1,0 +1,19 @@
+from abc import ABC, abstractmethod
+
+from ticketing.domain.models import Customer
+
+
+class Notifier(ABC):
+    @abstractmethod
+    def send(self, customer: Customer, message: str) -> None: ...
+
+
+class SmsNotifier(Notifier):
+    def send(self, customer, message):
+        first_line = message.splitlines()[0]
+        print(f"[sms -> {customer.phone}] {first_line}\n")
+
+
+class ReceiptPrinter(Notifier):
+    def send(self, customer, message):
+        print(f"[printer -> {customer.name}]\n{message}\n")
