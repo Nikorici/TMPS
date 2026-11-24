@@ -1,5 +1,6 @@
 from datetime import date
 
+from ticketing.behavioral.observer.order_status_feed import OrderStatusFeed
 from ticketing.domain.errors import SoldOut
 from ticketing.domain.models import Customer, Event, TicketOrder
 from ticketing.services.notifications import Notifier
@@ -17,12 +18,14 @@ class BookingService:
         repository: OrderRepository,
         notifiers: list[Notifier],
         receipts: ReceiptFormatter,
+        status_feed: OrderStatusFeed | None = None,
     ):
         self._calculator = calculator
         self._payments = payments
         self._repository = repository
         self._notifiers = notifiers
         self._receipts = receipts
+        self._status_feed = status_feed
 
     def book(self, event: Event, customer: Customer, quantity: int, ordered_on: date) -> TicketOrder:
         order = TicketOrder(event, customer, quantity, ordered_on)
@@ -34,6 +37,7 @@ class BookingService:
         order.total = quote.total
         order.mark_paid()
         saved = self._repository.save(order)
+        saved.status_feed = self._status_feed
         receipt = self._receipts.format(saved, quote)
         for notifier in self._notifiers:
             notifier.send(customer, receipt)

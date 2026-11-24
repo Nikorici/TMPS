@@ -7,6 +7,7 @@ from email import policy
 from email.message import EmailMessage
 from email.parser import BytesParser
 
+from ticketing.services.notifications import Notifier
 from ticketing.services.payments import PaymentGateway
 
 SENDER = "Test Conf <tickets@conf.example>"
@@ -29,3 +30,11 @@ class CountingGateway(PaymentGateway):
     def charge(self, customer, amount):
         self.charges += 1
         return f"TEST-{self.charges}"
+
+
+class RecordingNotifier(Notifier):
+    def __init__(self):
+        self.messages = []
+
+    def send(self, customer, message):
+        self.messages.append((customer, message))

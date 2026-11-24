@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date
 from decimal import Decimal
 
+from ticketing.behavioral.observer.order_status_feed import OrderStatusFeed
 from ticketing.behavioral.state.order_states import OrderState, PendingPaymentState
 
 
@@ -43,6 +44,7 @@ class TicketOrder:
     payment_reference: str | None = None
     id: int | None = None
     state: OrderState = field(default_factory=PendingPaymentState, compare=False)
+    status_feed: OrderStatusFeed | None = field(default=None, compare=False, repr=False)
 
     def __post_init__(self):
         if self.quantity < 1:
@@ -70,4 +72,6 @@ class TicketOrder:
         self._move_to(self.state.reinstate(self))
 
     def _move_to(self, new_state: OrderState) -> None:
-        self.state = new_state
+        old_state, self.state = self.state, new_state
+        if self.status_feed is not None:
+            self.status_feed.notify(self, old_state, new_state)
