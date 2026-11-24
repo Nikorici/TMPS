@@ -8,7 +8,9 @@ from ticketing.creational.catalog import EventCatalog
 from ticketing.creational.channels import BoxOfficeChannel, OnlineChannel
 from ticketing.creational.event_builder import EventBuilder
 from ticketing.domain.models import Customer
-from ticketing.services.notifications import EmailNotifier, ReceiptPrinter, SmsNotifier
+from ticketing.services.notifications import ReceiptPrinter, SmsNotifier
+from ticketing.structural.adapter.mailbox_email_notifier import MailboxEmailNotifier
+from tests.fixtures import SENDER, temp_outbox
 from ticketing.services.payments import CardPayment, CashPayment, PaymentGateway
 from ticketing.services.pricing import PriceCalculator
 from ticketing.services.receipts import ReceiptFormatter
@@ -91,9 +93,9 @@ class PrototypeTests(unittest.TestCase):
 
 class AbstractFactoryTests(unittest.TestCase):
     def test_online_family(self):
-        channel = OnlineChannel()
+        channel = OnlineChannel(temp_outbox(self), SENDER)
         self.assertIsInstance(channel.create_payment(), CardPayment)
-        self.assertEqual([type(n) for n in channel.create_notifiers()], [EmailNotifier, SmsNotifier])
+        self.assertEqual([type(n) for n in channel.create_notifiers()], [MailboxEmailNotifier, SmsNotifier])
 
     def test_box_office_family(self):
         channel = BoxOfficeChannel()
@@ -102,7 +104,7 @@ class AbstractFactoryTests(unittest.TestCase):
 
     def test_same_service_runs_on_either_family(self):
         for channel, reference, output in (
-            (OnlineChannel(), "CARD-0001", "[email -> buyer@example.com]"),
+            (OnlineChannel(temp_outbox(self), SENDER), "CARD-0001", "[email -> buyer@example.com]"),
             (BoxOfficeChannel(), "CASH-0001", "[printer -> Buyer]"),
         ):
             service = BookingService(

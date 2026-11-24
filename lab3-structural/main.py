@@ -1,5 +1,7 @@
+import mailbox
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 from ticketing.creational.catalog import EventCatalog
 from ticketing.creational.channels import BoxOfficeChannel, OnlineChannel, SalesChannel
@@ -40,7 +42,8 @@ def main():
     def open_desk(channel: SalesChannel) -> BookingService:
         return BookingService(calculator, channel.create_payment(), repository, channel.create_notifiers(), receipts)
 
-    online = open_desk(OnlineChannel())
+    outbox = mailbox.Maildir(Path(__file__).parent / "outbox")
+    online = open_desk(OnlineChannel(outbox, "Moldova Tech Summit <tickets@techsummit.example>"))
     box_office = open_desk(BoxOfficeChannel())
 
     student = Customer("Ana Rusu", "ana.rusu@example.com", "+37360000001", is_student=True)

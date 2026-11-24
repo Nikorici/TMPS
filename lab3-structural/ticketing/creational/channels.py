@@ -1,7 +1,9 @@
+import mailbox
 from abc import ABC, abstractmethod
 
-from ticketing.services.notifications import EmailNotifier, Notifier, ReceiptPrinter, SmsNotifier
+from ticketing.services.notifications import Notifier, ReceiptPrinter, SmsNotifier
 from ticketing.services.payments import CardPayment, CashPayment, PaymentGateway
+from ticketing.structural.adapter.mailbox_email_notifier import MailboxEmailNotifier
 
 
 class SalesChannel(ABC):
@@ -13,11 +15,15 @@ class SalesChannel(ABC):
 
 
 class OnlineChannel(SalesChannel):
+    def __init__(self, outbox: mailbox.Maildir, sender: str):
+        self._outbox = outbox
+        self._sender = sender
+
     def create_payment(self):
         return CardPayment()
 
     def create_notifiers(self):
-        return [EmailNotifier(), SmsNotifier()]
+        return [MailboxEmailNotifier(self._outbox, self._sender), SmsNotifier()]
 
 
 class BoxOfficeChannel(SalesChannel):
