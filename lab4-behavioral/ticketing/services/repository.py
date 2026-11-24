@@ -36,4 +36,4 @@ class InMemoryOrderRepository(OrderRepository):
         return list(self._orders.values())
 
     def tickets_sold(self, event):
-        return sum(order.quantity for order in self._orders.values() if order.event == event)
+        return sum(order.quantity for order in self._orders.values() if order.event == event and order.state.holds_seats)

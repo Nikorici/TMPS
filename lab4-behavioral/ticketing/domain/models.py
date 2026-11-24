@@ -1,6 +1,8 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 from decimal import Decimal
+
+from ticketing.behavioral.state.order_states import OrderState, PendingPaymentState
 
 
 @dataclass(frozen=True)
@@ -40,9 +42,32 @@ class TicketOrder:
     total: Decimal = Decimal("0.00")
     payment_reference: str | None = None
     id: int | None = None
+    state: OrderState = field(default_factory=PendingPaymentState, compare=False)
 
     def __post_init__(self):
         if self.quantity < 1:
             raise ValueError("An order needs at least one ticket")
         if self.ordered_on > self.event.date:
             raise ValueError("Tickets cannot be ordered after the event")
+
+    @property
+    def status(self) -> str:
+        return self.state.name
+
+    def mark_paid(self) -> None:
+        self._move_to(self.state.mark_paid(self))
+
+    def check_in(self) -> None:
+        self._move_to(self.state.check_in(self))
+
+    def undo_check_in(self) -> None:
+        self._move_to(self.state.undo_check_in(self))
+
+    def refund(self) -> None:
+        self._move_to(self.state.refund(self))
+
+    def reinstate(self) -> None:
+        self._move_to(self.state.reinstate(self))
+
+    def _move_to(self, new_state: OrderState) -> None:
+        self.state = new_state

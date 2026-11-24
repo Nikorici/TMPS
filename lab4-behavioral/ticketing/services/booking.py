@@ -32,6 +32,7 @@ class BookingService:
         quote = self._calculator.quote(order)
         order.payment_reference = self._payments.charge(customer, quote.total)
         order.total = quote.total
+        order.mark_paid()
         saved = self._repository.save(order)
         receipt = self._receipts.format(saved, quote)
         for notifier in self._notifiers:

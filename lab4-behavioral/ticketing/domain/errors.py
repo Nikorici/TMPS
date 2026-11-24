@@ -8,3 +8,7 @@ class SoldOut(Exception):
 
 class AccessDenied(Exception):
     pass
+
+
+class InvalidTransition(Exception):
+    pass
