@@ -4,3 +4,7 @@ class PaymentDeclined(Exception):
 
 class SoldOut(Exception):
     pass
+
+
+class AccessDenied(Exception):
+    pass
